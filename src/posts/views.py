@@ -1,11 +1,31 @@
 from django.shortcuts import render
 from .models import Post
 from django.http import JsonResponse
+from .forms import PostForm
+from profiles.models import Profile
 # Create your views here.
 
 def post_list_and_create(request):
-    qs = Post.objects.all()
-    return render(request, 'posts/main.html', {'qs':qs})
+    form = PostForm(request.POST or None)
+    # qs = Post.objects.all()
+
+# Author is using there "request.js_ajax()" to check for AJAX requests. 
+# but this method is used in the older version of the Django.
+# while i have installed the latest version.
+# So i am replaced it with "request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest'".
+# this is the source where i find it: Django >= 3.1 and is_ajax. (n.d.). Stack Overflow. https://stackoverflow.com/questions/63629935/django-3-1-and-is-ajax  
+    if request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest':
+        if form.is_valid():
+            author = Profile.objects.get(user=request.user)
+            instance = form.save(commit=False)
+            instance.author = author
+            instance.save()
+            
+    context = {
+        'form': form,
+    }
+
+    return render(request, 'posts/main.html', context)
 
 def load_post_data_view(request, num_posts):
     visible = 3
@@ -27,11 +47,7 @@ def load_post_data_view(request, num_posts):
         data.append(item)
     return JsonResponse({'data':data[lower:upper], 'size': size})
 
-# Author is using there "request.js_ajax()" to check for AJAX requests. 
-# but this method is used in the older version of the Django.
-# while i have installed the latest version.
-# So i am replaced it with "request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest'".
-# this is the source where i find it: Django >= 3.1 and is_ajax. (n.d.). Stack Overflow. https://stackoverflow.com/questions/63629935/django-3-1-and-is-ajax  
+
 def like_unlike_post(request):
     if request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest':
         pk = request.POST.get('pk')
