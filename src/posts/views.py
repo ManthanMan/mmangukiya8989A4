@@ -25,7 +25,25 @@ def load_post_data_view(request, num_posts):
             'author': obj.author.user.username
         }
         data.append(item)
-    return JsonResponse({'data':data[lower:upper], 'size': size})    
+    return JsonResponse({'data':data[lower:upper], 'size': size})
+
+# Author is using there "request.js_ajax()" to check for AJAX requests. 
+# but this method is used in the older version of the Django.
+# while i have installed the latest version.
+# So i am replaced it with "request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest'".
+# this is the source where i find it: Django >= 3.1 and is_ajax. (n.d.). Stack Overflow. https://stackoverflow.com/questions/63629935/django-3-1-and-is-ajax  
+def like_unlike_post(request):
+    if request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest':
+        pk = request.POST.get('pk')
+        obj = Post.objects.get(pk=pk)
+        if request.user in obj.liked.all():
+            liked = False
+            obj.liked.remove(request.user)
+        else:
+            liked = True
+            obj.liked.add(request.user)
+        return JsonResponse({'liked': liked, 'count': obj.like_count})
+
 
 def hello_world_view(request):
     return JsonResponse({'text': 'hello world x2'})
